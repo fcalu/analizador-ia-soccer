@@ -1,32 +1,45 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IA Soccer Analyst</title>
+    <title>IA Multi-Sport Analyst</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: #f8fafc; padding: 20px; }
-        .container { max-width: 800px; margin: auto; }
-        h1 { text-align: center; color: #22c55e; }
-        .card { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 6px solid #22c55e; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        .match { font-size: 1.25rem; font-weight: bold; margin-bottom: 10px; }
-        .pick { color: #f59e0b; white-space: pre-wrap; margin: 10px 0; }
-        .sugerencia { color: #38bdf8; font-style: italic; font-size: 0.95rem; }
+        body { font-family: sans-serif; background: #0f172a; color: white; padding: 20px; }
+        .container { max-width: 900px; margin: auto; }
+        .section-title { border-bottom: 2px solid #22c55e; padding-bottom: 10px; margin-top: 40px; color: #22c55e; }
+        .card { background: #1e293b; border-radius: 10px; padding: 15px; margin-bottom: 15px; border-left: 5px solid #3b82f6; }
+        .nba-card { border-left-color: #f59e0b; }
+        .match { font-weight: bold; font-size: 1.1em; }
+        .pick { color: #94a3b8; margin: 10px 0; font-size: 0.9em; white-space: pre-wrap; }
+        .sugerencia { color: #facc15; font-weight: bold; }
+        .no-data { color: #64748b; font-style: italic; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>⚽ Análisis de Fútbol</h1>
-        <p style="text-align: center;">Resultados de hoy y mañana ({{ hoy }} / {{ manana }})</p>
-        <hr>
-        {% for res in resultados %}
-        <div class="card">
-            <div class="match">{{ res.match }}</div>
-            <div class="pick"><strong>Pronóstico:</strong><br>{{ res.pick }}</div>
-            {% if res.sugerencia %}
-            <div class="sugerencia">💡 {{ res.sugerencia }}</div>
-            {% endif %}
-        </div>
+        <h1>🚀 IA Betting Center</h1>
+        <p>Análisis actualizado: {{ hoy }}</p>
+
+        <h2 class="section-title">⚽ Fútbol (UEFA Champions & más)</h2>
+        {% for m in soccer %}
+            <div class="card">
+                <div class="match">{{ m.match }}</div>
+                <div class="pick">{{ m.pick }}</div>
+                <div class="sugerencia">✨ {{ m.sugerencia }}</div>
+            </div>
+        {% else %}
+            <p class="no-data">No hay partidos de fútbol analizados para hoy.</p>
+        {% endfor %}
+
+        <h2 class="section-title">🏀 NBA Basketball</h2>
+        {% for b in nba %}
+            <div class="card nba-card">
+                <div class="match">{{ b.match }}</div>
+                <div class="pick">{{ b.pick }}</div>
+                <div class="sugerencia">🔥 {{ b.sugerencia }}</div>
+            </div>
+        {% else %}
+            <p class="no-data">No hay partidos de NBA analizados para hoy.</p>
         {% endfor %}
     </div>
 </body>
