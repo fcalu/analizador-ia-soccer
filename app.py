@@ -8,21 +8,24 @@ BASE_URL = "https://sportia-api.onrender.com/api/v1"
 
 def get_predictions(sport):
     results = []
-    hoy = datetime.now(timezone.utc).date()
-    manana = hoy + timedelta(days=1)
+    # Usamos strings para comparar fechas de forma más segura con la API
+    hoy_str = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    manana_str = (datetime.now(timezone.utc) + timedelta(days=1)).strftime('%Y-%m-%d')
     
     try:
-        # 1. Obtener partidos próximos
+        # 1. Obtener partidos programados
         url_upcoming = f"{BASE_URL}/matches/upcoming?sport={sport}"
         response = requests.get(url_upcoming, timeout=15)
+        if response.status_code != 200:
+            return results
+
         matches = response.json()
 
         for match in matches:
-            # Corregir formato de fecha
-            start_time = match.get("start_time").replace('Z', '+00:00')
-            fecha_match = datetime.fromisoformat(start_time).date()
+            # Extraemos los primeros 10 caracteres: "2026-01-28"
+            fecha_api = match.get("start_time")[:10]
 
-            if fecha_match in [hoy, manana]:
+            if fecha_api in [hoy_str, manana_str]:
                 payload = {
                     "sport": sport,
                     "league": match.get("league"),
@@ -31,34 +34,41 @@ def get_predictions(sport):
                     "away_team": match.get("away")
                 }
                 
-                # 2. Pedir predicción a la IA
-                res = requests.post(f"{BASE_URL}/ai/predict", json=payload, timeout=45)
-                if res.status_code == 200:
-                    data = res.json()
+                # 2. Solicitar análisis de la IA
+                try:
+                    res = requests.post(f"{BASE_URL}/ai/predict", json=payload, timeout=45)
+                    if res.status_code == 200:
+                        data = res.json()
+                        
+                        # Buscamos la línea del Pick Principal en el análisis
+                        analysis_text = data.get('analysis', '')
+                        sug = "Analizando..."
+                        for line in analysis_text.split('\n'):
+                            if any(x in line for x in ["Pick Principal", "Doble Oportunidad", "Total", "OVER", "UNDER"]):
+                                sug = line.replace('#', '').strip()
+                                break
+                        
+                        results.append({
+                            "match": data.get('match'),
+                            "pick": data.get('tipster_picks', 'No hay pick oficial'),
+                            "sugerencia": sug,
+                            "confianza": data.get('team_confidence', {}).get('moneyline', 'N/A')
+                        })
+                except Exception as e:
+                    print(f"Error analizando partido {match.get('home')}: {e}")
                     
-                    # Extraer el pick principal del análisis
-                    analysis = data.get('analysis', '')
-                    sug = next((line for line in analysis.split('\n') 
-                               if "Pick Principal" in line or "Doble Oportunidad" in line or "Total de puntos" in line), "Ver análisis completo")
-                    
-                    results.append({
-                        "match": data.get('match'),
-                        "pick": data.get('tipster_picks'),
-                        "sugerencia": sug,
-                        "sport": sport
-                    })
         return results
     except Exception as e:
-        print(f"Error en {sport}: {e}")
+        print(f"Error general en {sport}: {e}")
         return []
 
 @app.route('/')
 def index():
-    # Obtener ambos deportes
+    # Ejecutamos ambos análisis
     soccer_list = get_predictions("soccer")
     nba_list = get_predictions("nba")
     
-    hoy = datetime.now(timezone.utc).date()
+    hoy = datetime.now(timezone.utc).strftime('%d/%m/%Y')
     return render_template('index.html', soccer=soccer_list, nba=nba_list, hoy=hoy)
 
 if __name__ == "__main__":
