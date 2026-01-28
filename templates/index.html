@@ -1,58 +1,72 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IA Betting Center</title>
+    <title>IA Betting Center - Live</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        :root { --bg: #0f172a; --card: #1e293b; --accent: #22c55e; --nba: #f59e0b; --text: #f8fafc; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-        .container { max-width: 800px; margin: auto; }
-        header { text-align: center; margin-bottom: 30px; border-bottom: 1px solid #334155; padding-bottom: 20px; }
-        h1 { margin: 0; color: var(--accent); font-size: 2rem; }
-        .date { color: #94a3b8; font-size: 0.9rem; }
-        
-        .section-title { display: flex; align-items: center; gap: 10px; margin-top: 30px; font-size: 1.4rem; color: var(--accent); }
-        .section-title.nba { color: var(--nba); }
-        
-        .card { background: var(--card); border-radius: 12px; padding: 20px; margin-bottom: 15px; border-left: 5px solid var(--accent); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
-        .nba-card { border-left-color: var(--nba); }
-        
-        .match-name { font-size: 1.2rem; font-weight: bold; margin-bottom: 8px; }
-        .tipster { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; font-size: 0.9rem; margin: 10px 0; border: 1px dashed #475569; white-space: pre-wrap; }
-        .ai-pick { color: #facc15; font-weight: 600; display: flex; align-items: center; gap: 5px; }
-        .badge { font-size: 0.7rem; background: #3b82f6; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; }
-        
-        .empty { color: #64748b; text-align: center; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 10px; }
+        body { font-family: sans-serif; background: #0f172a; color: white; padding: 20px; }
+        .card { background: #1e293b; border-radius: 10px; padding: 15px; margin-bottom: 10px; border-left: 5px solid #3b82f6; }
+        .loading { color: #64748b; font-style: italic; font-size: 0.8em; }
+        .pick-box { color: #facc15; font-weight: bold; margin-top: 10px; }
+        .badge { background: #334155; padding: 2px 8px; border-radius: 5px; font-size: 0.7em; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🚀 IA Betting Center</h1>
-            <p class="date">Análisis del día: {{ hoy }}</p>
-        </header>
-
-        <div class="section-title">⚽ Fútbol - UEFA & Ligas</div>
+    <h1>🚀 IA Betting Center</h1>
+    
+    <h2>⚽ Fútbol</h2>
+    <div id="soccer-container">
         {% for m in soccer %}
-            <div class="card">
-                <div class="match-name">{{ m.match }}</div>
-                <div class="tipster">{{ m.pick }}</div>
-                <div class="ai-pick">✨ {{ m.sugerencia }} <span class="badge">IA CONF: {{ m.confianza }}%</span></div>
-            </div>
-        {% else %}
-            <div class="empty">Buscando partidos o no hay eventos disponibles ahora mismo.</div>
+        <div class="card" id="match-{{ m.event_id }}">
+            <div><strong>{{ m.home }} vs {{ m.away }}</strong></div>
+            <div class="loading">🤖 IA analizando...</div>
+        </div>
+        <script>
+            fetch('/predict', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    sport: 'soccer', league: '{{m.league}}', event_id: '{{m.event_id}}',
+                    home_team: '{{m.home}}', away_team: '{{m.away}}'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const div = document.getElementById('match-{{ m.event_id }}');
+                if(data.error) {
+                    div.innerHTML += '<div style="color:red">Error en análisis</div>';
+                } else {
+                    div.innerHTML = `<div><strong>${data.match}</strong> <span class="badge">${data.team_confidence?.moneyline || ''}% Conf.</span></div>
+                                     <div style="font-size:0.8em; color:#94a3b8; margin:5px 0;">${data.tipster_picks}</div>
+                                     <div class="pick-box">✨ Pick: ${data.analysis.split('\\n').find(l => l.includes('Pick')) || 'Ver detalle'}</div>`;
+                }
+            });
+        </script>
         {% endfor %}
+    </div>
 
-        <div class="section-title nba">🏀 NBA - Basketball</div>
+    <h2>🏀 NBA</h2>
+    <div id="nba-container">
         {% for b in nba %}
-            <div class="card nba-card">
-                <div class="match-name">{{ b.match }}</div>
-                <div class="tipster">{{ b.pick }}</div>
-                <div class="ai-pick">🔥 {{ b.sugerencia }} <span class="badge">IA CONF: {{ b.confianza }}%</span></div>
-            </div>
-        {% else %}
-            <div class="empty">No se encontraron partidos de NBA para analizar.</div>
+        <div class="card" style="border-left-color: #f59e0b;" id="match-{{ b.event_id }}">
+            <div><strong>{{ b.home }} vs {{ b.away }}</strong></div>
+            <div class="loading">🤖 IA analizando...</div>
+        </div>
+        <script>
+            fetch('/predict', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    sport: 'nba', league: '{{b.league}}', event_id: '{{b.event_id}}',
+                    home_team: '{{b.home}}', away_team: '{{b.away}}'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const div = document.getElementById('match-{{ b.event_id }}');
+                div.innerHTML = `<div><strong>${data.match}</strong></div><div class="pick-box">🔥 ${data.tipster_picks}</div>`;
+            });
+        </script>
         {% endfor %}
     </div>
 </body>
